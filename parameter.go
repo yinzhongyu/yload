@@ -19,8 +19,7 @@ type ParamSet struct {
 	ResultCh   chan *lib.CallResult // 调用结果通道。
 }
 
-// Check 会检查当前值的所有字段的有效性。
-// 若存在无效字段则返回值非nil。
+// Check 会检查参数的有效性
 func (pset *ParamSet) Check() error {
 	var errMsgs []string
 
@@ -48,7 +47,7 @@ func (pset *ParamSet) Check() error {
 		return errors.New(errMsg)
 	}
 	buf.WriteString(
-		fmt.Sprintf("Passed. (timeoutNS=%s, lps=%d, durationNS=%s)",
+		fmt.Sprintf("Check passed. (timeoutNS=%s, lps=%d, durationNS=%s)",
 			pset.TimeoutNS, pset.LPS, pset.DurationNS))
 	logs.Info(buf.String())
 	return nil
