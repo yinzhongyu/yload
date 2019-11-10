@@ -6,15 +6,8 @@ import (
 	"fmt"
 )
 
-//定义g池的类型
-type myTickets struct {
-	ticketTotol  uint32    //池总量
-	ticketCh     chan byte //现有票数
-	ticketStatus bool      //池状态
-}
-
-//定义g池的接口
-type Gotickets interface {
+// GoTickets 表示Goroutine票池的接口。
+type GoTickets interface {
 	// 拿走一张票。
 	Take()
 	// 归还一张票。
@@ -27,49 +20,58 @@ type Gotickets interface {
 	Remainder() uint32
 }
 
-//初始化方法
-func NewGoTickets(totol uint32) (Gotickets, error) {
-	g := &myTickets{}
-	if !g.init(totol) {
-		return nil, errors.New(fmt.Sprintf("goutine池初始化错误,容量为%d", totol))
-	} else {
-		return g, nil
-	}
+// myGoTickets 表示Goroutine票池的实现。
+type myGoTickets struct {
+	total    uint32        // 票的总数。
+	ticketCh chan struct{} // 票的容器。
+	active   bool          // 票池是否已被激活。
 }
 
-//初始化池数据
-func (g *myTickets) init(totol uint32) bool {
+// NewGoTickets 会新建一个Goroutine票池。
+func NewGoTickets(total uint32) (GoTickets, error) {
+	gt := myGoTickets{}
+	if !gt.init(total) {
+		errMsg :=
+			fmt.Sprintf("The goroutine ticket pool can NOT be initialized! (total=%d)\n", total)
+		return nil, errors.New(errMsg)
+	}
+	return &gt, nil
+}
 
-	if g.ticketStatus == false {
+func (gt *myGoTickets) init(total uint32) bool {
+	if gt.active {
 		return false
 	}
-	if totol == 0 {
+	if total == 0 {
 		return false
 	}
-
-	ch := make(chan byte, totol)
-	for i := 0; i < int(totol); i++ {
-		ch <- 1
+	ch := make(chan struct{}, total)
+	n := int(total)
+	for i := 0; i < n; i++ {
+		ch <- struct{}{}
 	}
-
-	g.ticketTotol = totol
-	g.ticketCh = ch
-	g.ticketStatus = true
-
+	gt.ticketCh = ch
+	gt.total = total
+	gt.active = true
 	return true
 }
-func (g *myTickets) Take() {
-	<-g.ticketCh
+
+func (gt *myGoTickets) Take() {
+	<-gt.ticketCh
 }
-func (g *myTickets) Return() {
-	g.ticketCh <- 1
+
+func (gt *myGoTickets) Return() {
+	gt.ticketCh <- struct{}{}
 }
-func (g *myTickets) Active() bool {
-	return g.Active()
+
+func (gt *myGoTickets) Active() bool {
+	return gt.active
 }
-func (g *myTickets) Total() uint32 {
-	return g.Total()
+
+func (gt *myGoTickets) Total() uint32 {
+	return gt.total
 }
-func (g *myTickets) Remainder() uint32 {
-	return uint32(len(g.ticketCh))
+
+func (gt *myGoTickets) Remainder() uint32 {
+	return uint32(len(gt.ticketCh))
 }

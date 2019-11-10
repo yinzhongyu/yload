@@ -4,12 +4,19 @@ import (
 	"time"
 )
 
-//状态标识
-const (
-	STATUS_ORIGINAL uint32 = 0 //原始
-	STATUS_STARTED  uint32 = 1 //开始
-	STATUS_STOPPED  uint32 = 2 //停止
-)
+// RawReq 表示原生请求的结构。
+type RawReq struct {
+	ID  int64
+	Req []byte
+}
+
+// RawResp 表示原生响应的结构。
+type RawResp struct {
+	ID     int64
+	Resp   []byte
+	Err    error
+	Elapse time.Duration
+}
 
 // RetCode 表示结果代码的类型。
 type RetCode int
@@ -46,43 +53,40 @@ func GetRetCodePlain(code RetCode) string {
 	return codePlain
 }
 
-type Caller interface {
-	BuildReq() RawReq                                         //创建请求
-	Call(req []byte, timeoutNS time.Duration) ([]byte, error) //调用
-	CheckResp(rawReq RawReq, rawResp RawResp) *CallRequst     //检查请求
+// CallResult 表示调用结果的结构。
+type CallResult struct {
+	ID     int64         // ID。
+	Req    RawReq        // 原生请求。
+	Resp   RawResp       // 原生响应。
+	Code   RetCode       // 响应代码。
+	Msg    string        // 结果成因的简述。
+	Elapse time.Duration // 耗时。
 }
 
-type Sender interface {
+// 声明代表载荷发生器状态的常量。
+const (
+	// STATUS_ORIGINAL 代表原始。
+	STATUS_ORIGINAL uint32 = 0
+	// STATUS_STARTING 代表正在启动。
+	STATUS_STARTING uint32 = 1
+	// STATUS_STARTED 代表已启动。
+	STATUS_STARTED uint32 = 2
+	// STATUS_STOPPING 代表正在停止。
+	STATUS_STOPPING uint32 = 3
+	// STATUS_STOPPED 代表已停止。
+	STATUS_STOPPED uint32 = 4
+)
+
+// Generator 表示载荷发生器的接口。
+type Generator interface {
 	// 启动载荷发生器。
+	// 结果值代表是否已成功启动。
 	Start() bool
 	// 停止载荷发生器。
-	// 第一个结果值代表已发载荷总数，且仅在第二个结果值为true时有效。
-	// 第二个结果值代表是否成功将载荷发生器转变为已停止状态。
+	// 结果值代表是否已成功停止。
 	Stop() bool
 	// 获取状态。
 	Status() uint32
-}
-
-//定义响应结果
-type CallRequst struct {
-	ID     int64         //ID
-	Req    RawReq        //原生请求
-	Resp   RawResp       //原生响应
-	Code   RetCode       //响应代码
-	Msg    string        //备注
-	Timeup time.Duration //耗费时长
-}
-
-//原生请求
-type RawReq struct {
-	Id  int64
-	Req []byte
-}
-
-//原生响应
-type RawResp struct {
-	ID     int64
-	Resp   []byte
-	Err    error
-	Timeup time.Duration
+	// 获取调用计数。每次启动会重置该计数。
+	CallCount() int64
 }
